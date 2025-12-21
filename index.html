@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Blood Donation Helper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f1f5f9; /* Slate 100 */
+        }
+        .brick-bg {
+            background-color: #334155; /* Slate 700 - matching the blue wall feel */
+            background-image: linear-gradient(30deg, #475569 12%, transparent 12.5%, transparent 87%, #475569 87.5%, #475569), linear-gradient(150deg, #475569 12%, transparent 12.5%, transparent 87%, #475569 87.5%, #475569), linear-gradient(30deg, #475569 12%, transparent 12.5%, transparent 87%, #475569 87.5%, #475569), linear-gradient(150deg, #475569 12%, transparent 12.5%, transparent 87%, #475569 87.5%, #475569), linear-gradient(60deg, #47556977 25%, transparent 25.5%, transparent 75%, #47556977 75%, #47556977), linear-gradient(60deg, #47556977 25%, transparent 25.5%, transparent 75%, #47556977 75%, #47556977);
+            background-size: 40px 70px;
+            background-position: 0 0, 0 0, 20px 35px, 20px 35px, 0 0, 20px 35px;
+        }
+        /* Custom Loading Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ef4444; /* Red 500 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chat-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 3px;
+        }
+        .message-bubble {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        .message-user {
+            background-color: #3b82f6; /* Blue 500 */
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .message-ai {
+            background-color: #e2e8f0; /* Slate 200 */
+            color: #1e293b;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+        .active-tab {
+            color: #ef4444;
+            border-bottom: 2px solid #ef4444;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen text-slate-800 bg-slate-50">
+
+    <!-- Global Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-30 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center">
+            <div class="loader mb-3"></div>
+            <p class="text-sm font-medium text-slate-600">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform transition-transform duration-300 translate-x-full">
+        <div class="bg-white border-l-4 border-red-500 shadow-lg rounded p-4 flex items-center">
+            <i class="bi bi-info-circle-fill text-red-500 mr-2"></i>
+            <span id="toastMsg" class="text-sm font-medium text-slate-700">Notification</span>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="flex-1 overflow-hidden relative">
+        
+        <!-- LOGIN VIEW -->
+        <section id="loginView" class="h-full w-full flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="bg-slate-700 p-6 text-center">
+                    <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                        <i class="bi bi-droplet-fill text-white text-3xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-white">Blood Helper</h1>
+                    <p class="text-slate-300 text-sm">Login to continue</p>
+                </div>
+                <div class="p-8">
+                    <form onsubmit="handleLogin(event)">
+                        <div class="mb-6">
+                            <label class="block text-slate-600 text-sm font-semibold mb-2">Contact Number</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i class="bi bi-telephone"></i>
+                                </span>
+                                <input type="tel" id="loginContact" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-colors" placeholder="e.g. 1234567890">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-slate-800 hovered-bg-slate-900 text-white font-semibold py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+                            Login
+                        </button>
+                    </form>
+                    <div class="mt-6 text-center">
+                        <p class="text-sm text-slate-500">Don't have an account? <a href="#" onclick="showView('signupView')" class="text-red-500 hover:text-red-700 font-semibold">Create Account</a></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SIGNUP VIEW -->
+        <section id="signupView" class="h-full w-full flex items-center justify-center p-4 hidden">
+            <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="bg-slate-700 p-6 text-center relative">
+                    <button onclick="showView('loginView')" class="absolute left-4 top-6 text-white hover:text-red-400 transition">
+                        <i class="bi bi-arrow-left text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold text-white">Create Account</h1>
+                    <p class="text-slate-300 text-sm">Join our community</p>
+                </div>
+                <div class="p-8">
+                    <form onsubmit="handleSignup(event)">
+                        <div class="mb-4">
+                            <label class="block text-slate-600 text-sm font-semibold mb-2">Full Name</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i class="bi bi-person"></i>
+                                </span>
+                                <input type="text" id="signupName" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-colors" placeholder="John Doe">
+                            </div>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-slate-600 text-sm font-semibold mb-2">Contact Number</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i class="bi bi-telephone"></i>
+                                </span>
+                                <input type="tel" id="signupContact" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-colors" placeholder="e.g. 1234567890">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+                            Sign Up
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- DONOR REGISTRATION VIEW -->
+        <section id="donorRegView" class="h-full w-full flex items-center justify-center p-4 hidden">
+            <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="bg-red-500 p-6 text-center">
+                    <h1 class="text-2xl font-bold text-white">Become a Donor</h1>
+                    <p class="text-red-100 text-sm">Help save lives today</p>
+                </div>
+                <div class="p-8">
+                    <form onsubmit="handleDonorRegistration(event)">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-slate-600 text-sm font-semibold mb-2">Full Name</label>
+                                <input type="text" id="regName" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-400 transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 text-sm font-semibold mb-2">Contact</label>
+                                <input type="tel" id="regContact" readonly class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="block text-slate-600 text-sm font-semibold mb-2">Blood Group</label>
+                                <select id="regBloodGroup" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-400 transition-colors text-slate-700">
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 text-sm font-semibold mb-2">City</label>
+                                <input type="text" id="regCity" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-400 transition-colors" placeholder="e.g. New York">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+                            Save Donor Info
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- DASHBOARD VIEW -->
+        <section id="dashboardView" class="h-full flex flex-col hidden bg-slate-50">
+            <!-- Header -->
+            <header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center z-10 sticky top-0">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-red-500 rounded-full p-1.5">
+                        <i class="bi bi-droplet-fill text-white"></i>
+                    </div>
+                    <span class="font-bold text-lg text-slate-800">Blood Helper</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="userNameDisplay" class="hidden md:block text-sm font-medium text-slate-600">User</span>
+                    <button onclick="logout()" class="text-slate-500 hover:text-red-500 transition">
+                        <i class="bi bi-box-arrow-right text-xl"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Navigation Tabs -->
+            <div class="bg-white border-b border-slate-200 px-6 flex space-x-6">
+                <button onclick="switchTab('donors')" id="tabDonors" class="py-3 px-2 text-sm font-medium text-slate-600 hover:text-red-500 transition active-tab">
+                    <i class="bi bi-person-lines-fill mr-1"></i> Donors
+                </button>
+                <button onclick="switchTab('ai')" id="tabAI" class="py-3 px-2 text-sm font-medium text-slate-600 hover:text-red-500 transition">
+                    <i class="bi bi-robot mr-1"></i> AI Assistant
+                </button>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-hidden relative">
+                
+                <!-- Donors List Page -->
+                <div id="donorsPage" class="absolute inset-0 overflow-y-auto p-4 md:p-6 pb-20">
+                    
+                    <!-- Filters -->
+                    <div class="bg-white rounded-xl p-4 shadow-sm mb-6 sticky top-0 z-20 border border-slate-100">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <div class="flex-1">
+                                <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">Blood Group</label>
+                                <select id="filterBloodGroup" onchange="fetchDonors()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 p-2.5">
+                                    <option value="">All Groups</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">City</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                        <i class="bi bi-geo-alt text-slate-400"></i>
+                                    </div>
+                                    <input type="text" id="filterCity" onkeyup="debounceFetchDonors()" class="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block w-full pl-10 p-2.5" placeholder="Filter by city...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- List Container -->
+                    <div id="donorsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Donor Cards will be injected here -->
+                    </div>
+                </div>
+
+                <!-- AI Chatbot Page -->
+                <div id="aiPage" class="absolute inset-0 hidden flex flex-col bg-white">
+                    <div id="chatHistory" class="flex-1 overflow-y-auto p-4 chat-scroll flex flex-col pt-6">
+                        <!-- Messages go here -->
+                        <div class="message-ai border border-slate-100 shadow-sm self-start mb-4">
+                            Hello! I am your AI Blood Donation Assistant. Ask me anything about eligibility, the process, or health tips!
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-slate-100 bg-slate-50">
+                        <form onsubmit="handleSendMessage(event)" class="flex gap-2">
+                            <input type="text" id="chatInput" class="flex-1 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-3 shadow-sm" placeholder="Ask something..." autocomplete="off">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center shadow-md transition-colors">
+                                <i class="bi bi-send-fill"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // CONFIG
+        const APP_SLUG = 'blood-app-demo-8973';
+        const API_BASE = 'https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one';
+        const AUTH_HEADER = { 'Authorization': 'Bearer sW7otC9XDofgIwQGLkGRWdv6TjU2', 'Content-Type': 'application/json' };
+
+        // STATE
+        let currentUser = null;
+        let debounceTimer;
+
+        // --- UTILS ---
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if(show) overlay.classList.remove('hidden');
+            else overlay.classList.add('hidden');
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.querySelector('div').className = `bg-white border-l-4 ${isError ? 'border-red-500' : 'border-green-500'} shadow-lg rounded p-4 flex items-center`;
+            toast.querySelector('i').className = `bi ${isError ? 'bi-exclamation-circle-fill text-red-500' : 'bi-check-circle-fill text-green-500'} mr-2`;
+            
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+
+        function showView(viewId) {
+            // Hide all views
+            ['loginView', 'signupView', 'donorRegView', 'dashboardView'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            // Show target
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        function switchTab(tab) {
+            const donorsPage = document.getElementById('donorsPage');
+            const aiPage = document.getElementById('aiPage');
+            const tabDonors = document.getElementById('tabDonors');
+            const tabAI = document.getElementById('tabAI');
+
+            if (tab === 'donors') {
+                donorsPage.classList.remove('hidden');
+                aiPage.classList.add('hidden');
+                tabDonors.classList.add('active-tab');
+                tabDonors.classList.remove('text-slate-600');
+                tabAI.classList.remove('active-tab');
+                tabAI.classList.add('text-slate-600');
+            } else {
+                donorsPage.classList.add('hidden');
+                aiPage.classList.remove('hidden');
+                tabAI.classList.add('active-tab');
+                tabAI.classList.remove('text-slate-600');
+                tabDonors.classList.remove('active-tab');
+                tabDonors.classList.add('text-slate-600');
+            }
+        }
+
+        // --- DB OPERATIONS ---
+        
+        async function dbOp(action, collection, data = null, conditions = null) {
+            const payload = {
+                appSlug: APP_SLUG,
+                action: action,
+                collection: collection,
+            };
+            if(data) payload.data = data;
+            if(conditions) payload.conditions = conditions;
+
+            try {
+                const response = await fetch(`${API_BASE}/mongodb`, {
+                    method: 'POST',
+                    headers: AUTH_HEADER,
+                    body: JSON.stringify(payload)
+                });
+                return await response.json();
+            } catch (error) {
+                console.error("DB Error:", error);
+                return { success: false };
+            }
+        }
+
+        // --- AUTH LOGIC ---
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const contact = document.getElementById('loginContact').value.trim();
+            if(!contact) return;
+
+            showLoading(true);
+
+            // 1. Check if user exists
+            const res = await dbOp('read', 'users', null, { contact: contact });
+            
+            if (res.success && res.result.read && res.result.read.length > 0) {
+                currentUser = res.result.read[0];
+                document.getElementById('userNameDisplay').innerText = currentUser.fullName;
+                
+                // 2. Check if donor
+                checkIfDonor();
+            } else {
+                showLoading(false);
+                showToast("User not found. Please sign up.", true);
+            }
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('signupName').value.trim();
+            const contact = document.getElementById('signupContact').value.trim();
+
+            showLoading(true);
+
+            // 1. Check duplicate
+            const checkRes = await dbOp('read', 'users', null, { contact: contact });
+            if (checkRes.success && checkRes.result.read.length > 0) {
+                showLoading(false);
+                showToast("Contact already exists.", true);
+                return;
+            }
+
+            // 2. Create user
+            const createRes = await dbOp('create', 'users', {
+                fullName,
+                contact,
+                createdAt: new Date().toISOString()
+            });
+
+            showLoading(false);
+            if (createRes.success) {
+                showToast("Account created! Please login.");
+                showView('loginView');
+            } else {
+                showToast("Signup failed. Try again.", true);
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginContact').value = '';
+            document.getElementById('chatHistory').innerHTML = '<div class="message-ai border border-slate-100 shadow-sm self-start mb-4">Hello! I am your AI Blood Donation Assistant. Ask me anything about eligibility, the process, or health tips!</div>';
+            showView('loginView');
+        }
+
+        // --- DONOR LOGIC ---
+
+        async function checkIfDonor() {
+            const res = await dbOp('read', 'donors', null, { userId: currentUser._id });
+            
+            showLoading(false);
+            if (res.success && res.result.read.length > 0) {
+                // Is donor -> Go to dashboard
+                showView('dashboardView');
+                fetchDonors();
+            } else {
+                // Not donor -> Go to registration
+                document.getElementById('regName').value = currentUser.fullName;
+                document.getElementById('regContact').value = currentUser.contact;
+                showView('donorRegView');
+            }
+        }
+
+        async function handleDonorRegistration(e) {
+            e.preventDefault();
+            
+            const bloodGroup = document.getElementById('regBloodGroup').value;
+            const city = document.getElementById('regCity').value.trim();
+            const name = document.getElementById('regName').value.trim();
+
+            showLoading(true);
+
+            const payload = {
+                userId: currentUser._id,
+                fullName: name,
+                contact: currentUser.contact,
+                bloodGroup: bloodGroup,
+                city: city, // Storing as lowercase for normalizing search slightly, though simple match
+                createdAt: new Date().toISOString()
+            };
+
+            const res = await dbOp('create', 'donors', payload);
+            
+            showLoading(false);
+            if (res.success) {
+                showToast("Registered as Donor!");
+                showView('dashboardView');
+                fetchDonors();
+            } else {
+                showToast("Error saving info.", true);
+            }
+        }
+
+        function debounceFetchDonors() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fetchDonors, 500);
+        }
+
+        async function fetchDonors() {
+            const bloodGroup = document.getElementById('filterBloodGroup').value;
+            const city = document.getElementById('filterCity').value.trim();
+
+            // Build conditions
+            // Since the API conditions perform exact match usually, for city partial match we might need client side filtering or strict entry.
+            // Let's try exact first. If not, client side filter.
+            // To make it robust for this demo: fetch all, client filter. 
+            // Reason: MongoDB endpoint 'conditions' is usually strict equality unless regex is passed (which might not be supported easily in this generic proxy).
+            
+            const listContainer = document.getElementById('donorsList');
+            listContainer.innerHTML = '<div class="col-span-full text-center py-10 opacity-50"><div class="loader mx-auto mb-2"></div>Loading donors...</div>';
+
+            const res = await dbOp('read', 'donors');
+            
+            if (res.success) {
+                let donors = res.result.read;
+                
+                // Client side filtering for better UX in prototype
+                if (bloodGroup) {
+                    donors = donors.filter(d => d.bloodGroup === bloodGroup);
+                }
+                if (city) {
+                    donors = donors.filter(d => d.city.toLowerCase().includes(city.toLowerCase()));
+                }
+
+                renderDonors(donors);
+            } else {
+                listContainer.innerHTML = '<div class="col-span-full text-center text-red-500">Failed to load donors.</div>';
+            }
+        }
+
+        function renderDonors(donors) {
+            const listContainer = document.getElementById('donorsList');
+            listContainer.innerHTML = '';
+
+            if (donors.length === 0) {
+                listContainer.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-12 text-slate-400">
+                    <i class="bi bi-person-x text-4xl mb-2"></i>
+                    <p>No donors found matching criteria.</p>
+                </div>`;
+                return;
+            }
+
+            donors.forEach(donor => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative overflow-hidden group';
+                
+                // Random gradient bar on top
+                const colors = ['bg-red-500', 'bg-blue-500', 'bg-slate-500'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                card.innerHTML = `
+                    <div class="absolute top-0 left-0 w-1 h-full ${color}"></div>
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg">${donor.fullName}</h3>
+                            <p class="text-xs text-slate-500 flex items-center gap-1">
+                                <i class="bi bi-geo-alt-fill"></i> ${donor.city}
+                            </p>
+                        </div>
+                        <span class="bg-red-50 text-red-600 font-bold px-3 py-1 rounded-lg text-sm border border-red-100 shadow-sm">
+                            ${donor.bloodGroup}
+                        </span>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center text-sm">
+                        <span class="text-slate-400 font-mono text-xs">ID: ...${donor._id.slice(-4)}</span>
+                        <a href="tel:${donor.contact}" class="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-900 transition flex items-center gap-2">
+                            <i class="bi bi-telephone-fill text-xs"></i> Call
+                        </a>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        // --- AI CHATBOT LOGIC ---
+
+        async function handleSendMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessageToChat(message, 'user');
+            input.value = '';
+
+            // Loading bubble to indicate "Typing"
+            const typingId = 'typing-' + Date.now();
+            const history = document.getElementById('chatHistory');
+            const typingBubble = document.createElement('div');
+            typingBubble.id = typingId;
+            typingBubble.className = 'message-ai self-start mb-4 italic text-slate-500 text-xs';
+            typingBubble.innerText = 'AI is typing...';
+            history.appendChild(typingBubble);
+            history.scrollTop = history.scrollHeight;
+
+            try {
+                // Call AI API
+                const response = await fetch(`${API_BASE}/ai`, {
+                    method: 'POST',
+                    headers: AUTH_HEADER,
+                    body: JSON.stringify({
+                        messages: [
+                            { role: "system", content: "You are a helpful AI assistant for a Blood Donation application. You help users understand blood types, eligibility (age, weight, health conditions), and preparation tips before donating. Keep answers concise and encouraging." },
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: message }
+                                ]
+                            }
+                        ]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Remove typing bubble
+                document.getElementById(typingId).remove();
+
+                if (data.message) {
+                    addMessageToChat(data.message, 'ai');
+                } else {
+                    addMessageToChat("I'm sorry, I couldn't process that right now.", 'ai');
+                }
+
+            } catch (error) {
+                document.getElementById(typingId).remove();
+                addMessageToChat("Error connecting to AI service.", 'ai');
+            }
+        }
+
+        function addMessageToChat(text, type) {
+            const history = document.getElementById('chatHistory');
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble shadow-sm ${type === 'user' ? 'message-user' : 'message-ai'}`;
+            
+            // Allow basic formatting for AI
+            if(type === 'ai') {
+                // simple replace for newlines to br
+                bubble.innerHTML = text.replace(/\n/g, '<br>');
+            } else {
+                bubble.innerText = text;
+            }
+            
+            history.appendChild(bubble);
+            history.scrollTop = history.scrollHeight;
+        }
+
+        // Init
+        // Check if session persistence is desired? For this wireframe, we start at login.
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
